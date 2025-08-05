@@ -18,11 +18,18 @@ Only respond to questions related to food, diets, nutrition, or health goals lik
 Never answer unrelated questions (math, politics, programming, etc.).
 """
 
-@app.post("/ask")
+WORKOUT_PLAN_PROMPT = """You are a certified fitness trainer AI assistant. Your job is to provide helpful, accurate, and safe workout plans to users.
+Only respond to questions related to exercise, fitness, or health goals like weight loss, muscle gain, and injuries.
+Never answer unrelated questions (math, politics, programming, etc.). Here are the user's specific requirements:
+
+
+"""
+
+@app.post("/generate_diet_plan")
 def ask_bot(req: ChatRequest):
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": req.prompt}
+        {"role": "user", "content": req.body.prompt}
     ]
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -30,3 +37,16 @@ def ask_bot(req: ChatRequest):
     )
     return {"response": response["choices"][0]["message"]["content"]}
 #http://127.0.0.1:8000/docs
+
+@app.post('generate_workout_plan')
+def generate_workout_plan(req: ChatRequest):
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": WORKOUT_PLAN_PROMPT + req.body.prompt}
+    ]
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages
+    )
+    return {"response": response["choices"][0]["message"]["content"]}
