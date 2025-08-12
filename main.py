@@ -8,6 +8,9 @@ from openai import OpenAI, APIError, APIConnectionError, RateLimitError, Authent
 import os
 import traceback
 import json
+from typing import Dict, Any, List, Optional
+from fastapi import Body
+from pydantic import BaseModel, Field
 
 HERE = Path(__file__).parent
 load_dotenv(dotenv_path=HERE / ".env", override=True)
@@ -29,9 +32,9 @@ class ChatRequest(BaseModel):
     prompt: str
 
 SYSTEM_PROMPT = (
-    "You are a certified nutritionist AI assistant. Provide helpful, accurate, and safe dietary advice. "
+    "You are a certified nutritionist and personal training AI assistant. Provide helpful, accurate, and safe dietary and fitness advice. "
     "Only respond to questions related to food, diets, nutrition, or health goals like weight loss, "
-    "muscle gain, and allergies. Politely refuse unrelated questions."
+    "fitness, muscle gain, or general guidance on how to stay fit. Politely refuse unrelated questions."
 )
 
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")  # safer default in 2025; change if needed
@@ -50,37 +53,77 @@ def ping():
         "model": MODEL,
         "debug": DEBUG,
     }
+class PlanSpecifications(BaseModel):
+    num_days_a_week: int = Field(..., gt=0, description="Number of workout days per week")
+    fitness_goal: str = Field(..., description="User's fitness goal (e.g., weight loss, muscle gain)")
+    avg_workout_length: int = Field(..., gt=0, description="Average workout length in minutes")
+    experience_level: str = Field(..., description="User's experience level (e.g., beginner, intermediate, advanced)")
+    intensity: str = Field(..., description="Desired workout intensity (e.g., low, medium, high)")
 
-@app.post('/workout_plan')
-async def generate_workout_plan(req):
+class WorkoutExercise(BaseModel):
+    exercise: str
+    sets: int
+    reps: int
+    rest: Optional[str] = None
 
+class WorkoutPlan(BaseModel):
+    days: Dict[str, List[WorkoutExercise]]  # e.g., {"Monday": [WorkoutExercise, ...], ...}
+
+class WorkoutPlanRequest(BaseModel):
+    plan_specifications: PlanSpecifications
+
+class WorkoutPlanResponse(BaseModel):
+    workout_plan: WorkoutPlan
+
+@app.post('/workout_plan', response_model=WorkoutPlanResponse)
+async def generate_workout_plan(req: WorkoutPlanRequest = Body(...)):
     """
-    Takes in request body which should contain 'plan_specifications' as a JSON object or dict.
+    Takes in request body which should contain 'plan_specifications' as a JSON object.
     Validates the plan_specifications and if valid, plugs into OpenAI API to generate a workout plan.
     Returns the generated workout plan or an error message if validation fails.
     Workout plan is also generated according to a specific schema --> error out if it doesn't follow this schema.
-    
     RETURNS:
     json with 'workout_plan' key containing json of plan details
     400 Bad Request if 'plan_specifications' is missing or invalid, or if generation fails.
     """
+
+    plan_specifications = req.plan_specifications
+
+    user_prompt = (
+        f"Generate a detailed workout plan according to the following specifications:\n"
+        f"- Number of days per week: {plan_specifications.num_days_a_week}\n"
+        f"- Fitness goal: {plan_specifications.fitness_goal}\n"
+        f"- Average workout length (minutes): {plan_specifications.avg_workout_length}\n"
+        f"- Experience level: {plan_specifications.experience_level}\n"
+        f"- Intensity: {plan_specifications.intensity}\n"
+        f"Return the plan as a JSON object with a 'days' key, where each key is a day of the week and the value is a list of exercises. Each exercise should have: exercise (str), sets (int), reps (int), and rest (str, optional). For any numeric values, only include the numbers, no units or extra text."
+        f"For any numeric values that indicate time, assume that the unit is minutes unless otherwise specified. For example, if the user specifies 30 minutes, just return 30 without 'minutes'."
+        f"Do not include any additional text or explanations, just the JSON object, and don't include the json signifier in the response, JUST the object."
+    )   
+
     try:
-        body = await req.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request body.")
+        resp = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.3,
+        )
 
-    plan_specifications = body.get("plan_specifications")
-    if plan_specifications is None:
-        raise HTTPException(status_code=400, detail="Missing 'plan_specifications' in request body.")
-
-    if isinstance(plan_specifications, str):
+        content = resp.choices[0].message.content
         try:
-            plan_specifications = json.loads(plan_specifications)
+            workout_plan_dict = json.loads(content)
+            # Validate against WorkoutPlan schema
+            workout_plan = WorkoutPlan(**workout_plan_dict)
         except Exception:
-            raise HTTPException(status_code=400, detail="'plan_specifications' must be a valid JSON object or dict.")
+            raise HTTPException(status_code=502, detail="OpenAI did not return a valid JSON workout plan. Response was: " + content)
 
-    if not isinstance(plan_specifications, dict):
-        raise HTTPException(status_code=400, detail="'plan_specifications' must be a dictionary.")
+        return {"workout_plan": workout_plan}
+
+    except Exception as e:
+        _log_exc("UnexpectedError", e)
+        return JSONResponse(status_code=500, content=_msg("Unexpected server error: " + str(e)))
 
     
 
