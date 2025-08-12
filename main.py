@@ -1,9 +1,30 @@
 # main.py
 from fastapi import FastAPI, HTTPException
+# main.py
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from pathlib import Path
+from fastapi.responses import JSONResponse
+from pathlib import Path
 from dotenv import load_dotenv
+from openai import OpenAI, APIError, APIConnectionError, RateLimitError, AuthenticationError, NotFoundError
+import os
+import traceback
+
+HERE = Path(__file__).parent
+load_dotenv(dotenv_path=HERE / ".env", override=True)
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+
+if not OPENAI_API_KEY:
+    raise RuntimeError("OPENAI_API_KEY not set. Create a .env next to main.py or export it.")
+
+client = OpenAI(
+    api_key=OPENAI_API_KEY
+    
+)
 from openai import OpenAI, APIError, APIConnectionError, RateLimitError, AuthenticationError, NotFoundError
 import os
 import traceback
