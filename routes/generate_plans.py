@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
 import json
-# from main import client, MODEL, SYSTEM_PROMPT, _log_exc, _msg
+
 from models.workout_plan_models import WorkoutPlanRequest, WorkoutPlan, WorkoutPlanResponse
 from models.diet_plan_models import DietPlanRequest, DietPlan, DietPlanResponse
 from models.diet_plan_models import ChatRequest
@@ -14,7 +14,7 @@ from openai import AuthenticationError, NotFoundError, RateLimitError, APIConnec
 
 
 
-router = APIRouter(prefix="/generate_plan", tags=["Users"])
+router = APIRouter(prefix="/generate_plan", tags=["Plan Generation"])
 
 
 
