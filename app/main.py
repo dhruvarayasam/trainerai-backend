@@ -1,20 +1,7 @@
-# main.py
-from fastapi import FastAPI, HTTPException
-# main.py
-from fastapi.responses import JSONResponse
-from pathlib import Path
-from dotenv import load_dotenv
-from openai import OpenAI, APIError, APIConnectionError, RateLimitError, AuthenticationError, NotFoundError
-import os
+from fastapi import FastAPI
 import traceback
-from routes import generate_plans
-from constants import OPENAI_API_KEY, DEBUG, MODEL, SYSTEM_PROMPT
-from pydantic import BaseModel
-
-class ChatRequest(BaseModel):
-    prompt: str
-
-
+from app.routes import generate_plans
+from app.constants import OPENAI_API_KEY, DEBUG, MODEL
 
 
 app = FastAPI()
@@ -24,10 +11,6 @@ app = FastAPI()
 INCLUDE ROUTERS HERE
 """
 app.include_router(generate_plans.router)
-
-
-
-
 
 
 @app.get("/health")

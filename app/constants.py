@@ -2,12 +2,13 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-
-
 HERE = Path(__file__).parent
 load_dotenv(dotenv_path=HERE / ".env", override=True)
+
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+MONGO_URI = os.getenv("MONGO_URI")
 
 SYSTEM_PROMPT = (
     "You are a certified nutritionist and personal training AI assistant. Provide helpful, accurate, and safe dietary and fitness advice. "

@@ -2,11 +2,10 @@ from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
 import json
 
-from models.workout_plan_models import WorkoutPlanRequest, WorkoutPlan, WorkoutPlanResponse
-from models.diet_plan_models import DietPlanRequest, DietPlan, DietPlanResponse
-from models.diet_plan_models import ChatRequest
-from services.essentials import client, _log_exc, _msg
-from constants import MODEL, SYSTEM_PROMPT
+from app.models.workout_plan_models import WorkoutPlanRequest, WorkoutPlan, WorkoutPlanResponse
+from app.models.diet_plan_models import DietPlanRequest, DietPlan, DietPlanResponse
+from app.services.essentials import client, _log_exc, _msg
+from app.constants import MODEL, SYSTEM_PROMPT
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
 from openai import AuthenticationError, NotFoundError, RateLimitError, APIConnectionError, APIError
